@@ -354,38 +354,62 @@ const delay = function (interval) {
 	};
 	upload_button_upload.addEventListener('click', async function () {
 		if (checkIsDisable(this)) return;
-		if (!_file) {
+		if (_file.length === 0) {
 			alert('请您先选择要上传的文件~~');
 			return;
 		}
 		changeDisable(true);
-		// 生成文件的hash名
-		let {
-			filename
-		} = await changeBuffer(_file);
-		// 把文件传递给服务器：FormData / BASE64
-		let formData = new FormData();
-		formData.append('file', _file);
-		formData.append('filename', filename);
-		instance.post('/upload_single_name', formData).then(data => {
-			if (+data.code === 0) {
-				alert(`文件已经上传成功~~,您可以基于 ${data.servicePath} 访问这个资源~~`);
-				return;
-			}
-			return Promise.reject(data.codeText);
-		}).catch(err => {
-			alert('文件上传失败，请您稍后再试~~');
-		}).finally(() => {
-			changeDisable(false);
-			_file = null;
-		})
+
+
+
+
+		changeDisable(false);
 	})
+	// 基于事件委托实现移除的操作
+	upload_list.addEventListener('click', function (ev) {
+		let target = ev.target,
+			curLi = null,
+			key;
+		if (target.tagName === 'EM') {
+			curLi = target.parentNode.parentNode;
+			if (!curLi) return;
+			upload_list.removeChild(curLi);
+			key = curLi.getAttribute("key");
+			_file = _file.filter(item => item.key !== key);
+			console.log(_file);
+			if (_file.length === 0) {
+				upload_list.style.display = 'none';
+			}
+		}
+	});
+	// 随机数生成函数
+	const createRandom = function () {
+		let ran = Math.random() * new Date();
+		return ran.toString(16).replace('.', '')
+	};
 	upload_inp.addEventListener('change', async function () {
-		_file = upload_inp.files;
-		console.log(_file);
+		_file = Array.from(upload_inp.files);
+		if (_file.length === 0) return;
+		// 重构集合的数据结构，给每一项设置一个位置值，作为自定义属性存储到元素上，后期点击删除按钮的时候，我们基于这个自定义属性获取唯一值，
+		// 再到集合中根据这个唯一值删除集合中这一项
+		_file = _file.map(file => {
+			return {
+				file,
+				filename: file.name,
+				key: createRandom()
+			}
+		})
+		let str = ``;
+		_file.forEach((item, index) => {
+			str += `<li key=${item.key}>
+				<span>文件${index+1}：${item.filename}</span>
+				<span><em>移除</em></span>
+			</li>`;
+		})
+		upload_list.innerHTML = str;
+		upload_list.style.display = 'block';
 	})
 	upload_button_select.addEventListener('click', function () {
-		// 给当前元素的某个行为绑定方法，事件行为中的方法触发this指向的是元素本身
 		if (checkIsDisable(this)) return;
 		upload_inp.click();
 	});
