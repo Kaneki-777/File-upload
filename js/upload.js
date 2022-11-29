@@ -336,7 +336,7 @@ const delay = function (interval) {
 		upload_button_select = upload.querySelector('.upload_button.select'),
 		upload_button_upload = upload.querySelector('.upload_button.upload'),
 		upload_list = upload.querySelector('.upload_list');
-	let _file = null;
+	let _file = [];
 	const checkIsDisable = element => {
 		let classList = element.classList;
 		return classList.contains('disable') || classList.contains('loading');
@@ -359,11 +359,42 @@ const delay = function (interval) {
 			return;
 		}
 		changeDisable(true);
+		// 循环发送请求
+		let upload_list_arr = Array.from(upload_list.querySelectorAll('li'));
+		_file = _file.map(item => {
+			let fm = new FormData;
+			curLi = upload_list_arr.find(liBox => liBox.getAttribute('key') === item.key),
+				curSpan = curLi ? curLi.querySelector('span:nth-last-child(1)') : null;
+			fm.append('file', item.file);
+			fm.append('filename', item.filename);
+			return instance.post('/upload_single', fm, {
+				// 监测每一个的上传进度
+				onUploadProgress(ev) {
+					if (curSpan) {
+						curSpan.innerHTML = `${(ev.loaded/ev.total*100).toFixed(2)}%`
+					}
+				}
+			}).then(data => {
+				if (+data.code === 0) {
+					if (curSpan) {
+						curSpan.innerHTML = `100%`
+					}
+					return;
+				}
+				return Promise.reject();
+			})
+		})
 
-
-
-
-		changeDisable(false);
+		Promise.all(_file).then(() => {
+			alert('恭喜您，所有文件都上传成功~~');
+		}).catch(() => {
+			alert('很遗憾，上传过程中出现问题，请您稍后再试~~');
+		}).finally(() => {
+			changeDisable(false);
+			_file = [];
+			upload_list.innerHTML = '';
+			upload_list.style.display = 'none';
+		});
 	})
 	// 基于事件委托实现移除的操作
 	upload_list.addEventListener('click', function (ev) {
@@ -376,7 +407,6 @@ const delay = function (interval) {
 			upload_list.removeChild(curLi);
 			key = curLi.getAttribute("key");
 			_file = _file.filter(item => item.key !== key);
-			console.log(_file);
 			if (_file.length === 0) {
 				upload_list.style.display = 'none';
 			}
