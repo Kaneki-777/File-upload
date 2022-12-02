@@ -444,3 +444,51 @@ const delay = function (interval) {
 		upload_inp.click();
 	});
 })();
+
+/* 拖拽上传 */
+(function () {
+	let upload = document.querySelector('#upload6'),
+		upload_inp = upload.querySelector('.upload_inp'),
+		upload_submit = upload.querySelector('.upload_submit'),
+		upload_mark = upload.querySelector('.upload_mark');
+	let isTrue = false;
+	const uploadFile = async file => {
+		if (isTrue) return;
+		isTrue = true;
+		upload_mark.style.display = 'block';
+		try {
+			let fm = new FormData,
+				data;
+			fm.append("file", file);
+			fm.append("filename", file.name);
+			data = await instance.post('/upload_single', fm);
+			if (+data.code === 0) {
+				alert('文件已经上传成功');
+				return;
+			}
+			throw data.codeText;
+		} catch {
+			alert('文件上传失败，请您稍后再试~~');
+		} finally {
+			upload_mark.style.display = 'none';
+			isTrue = false;
+		}
+	};
+	upload.addEventListener('dragover', function (ev) {
+		ev.preventDefault();
+	})
+	upload.addEventListener('drop', function (ev) {
+		ev.preventDefault();
+		let file = ev.dataTransfer.files[0];
+		if (!file) return;
+		uploadFile(file);
+	})
+	upload_inp.addEventListener('change', function () {
+		let file = upload_inp.files[0];
+		if (!file) return;
+		uploadFile(file);
+	})
+	upload_submit.addEventListener('click', function () {
+		upload_inp.click();
+	})
+})();
